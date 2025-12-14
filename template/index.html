@@ -1,0 +1,24 @@
+
+    Task Manager
+    
+        body { font-family: Arial; margin: 50px; background: #f0f0f0; }
+        .container { background: white; padding: 30px; border-radius: 10px; }
+        h1 { color: #333; }
+        input[type="text"] { padding: 10px; width: 300px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        ul { list-style: none; padding: 0; }
+        li { background: #e9ecef; margin: 10px 0; padding: 10px; border-radius: 5px; }
+    
+
+
+    
+        Task Manager Application
+        
+            
+            Add Task
+        
+        Tasks:
+        
+            {% for task in tasks %}
+            {{ task[1] }}
+            {% endfor %}
