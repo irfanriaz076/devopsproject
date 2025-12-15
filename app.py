@@ -1,8 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for
 import pymysql
 import os
+from prometheus_flask_exporter import PrometheusMetrics  # new
 
 app = Flask(__name__)
+metrics = PrometheusMetrics(app)  # new: exposes /metrics on port 5000
 
 # Database configuration
 db_config = {
