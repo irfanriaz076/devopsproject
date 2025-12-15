@@ -39,7 +39,7 @@ spec:
           echo "MySQL is ready!"
       containers:
       - name: flask-app
-        image: YOUR_DOCKERHUB_USERNAME/flask-task-manager:latest
+        image: irfanriaz076/flask-task-manager:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
