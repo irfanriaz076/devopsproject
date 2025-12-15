@@ -206,7 +206,7 @@ pipeline {
                         // Apply MySQL deployment first
                         sh '''
                             echo "Deploying MySQL..."
-                            kubectl apply -f mysql-deployment.yml
+                            kubectl apply -f mysql-deployement.yml
                             
                             echo "Waiting for MySQL to be ready..."
                             kubectl wait --for=condition=ready pod -l app=mysql --timeout=300s || true
@@ -216,7 +216,7 @@ pipeline {
                         // Apply application deployment
                         sh '''
                             echo "Deploying Flask application..."
-                            kubectl apply -f app-deployment.yml
+                            kubectl apply -f app-deployement.yml
                             
                             echo "Waiting for deployment rollout..."
                             kubectl rollout status deployment/flask-app --timeout=300s
@@ -269,7 +269,7 @@ pipeline {
                         // Deploy Grafana
                         sh '''
                             echo "Deploying Grafana..."
-                            kubectl apply -f grafana-deployment.yml
+                            kubectl apply -f grafana-deployement.yml
                             
                             echo "Waiting for Grafana to be ready..."
                             kubectl wait --for=condition=ready pod -l app=grafana --timeout=120s || true
