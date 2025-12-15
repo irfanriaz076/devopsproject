@@ -4,7 +4,7 @@ pipeline {
     environment {
         // Docker configuration
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = "YOUR_DOCKERHUB_USERNAME/flask-task-manager"
+        DOCKER_IMAGE = "irfanriaz076/flask-task-manager"
         IMAGE_TAG = "${BUILD_NUMBER}"
         LATEST_TAG = "latest"
         
@@ -13,7 +13,7 @@ pipeline {
         K8S_DEPLOYMENT = "flask-app"
         
         // Git configuration
-        GIT_REPO = "https://github.com/YOUR_USERNAME/flask-task-manager.git"
+        GIT_REPO = "https://github.com/irfanriaz076/devopsproject"
         GIT_BRANCH = "main"
     }
     
