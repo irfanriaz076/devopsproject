@@ -1,321 +1,133 @@
 pipeline {
     agent any
-    
+
     environment {
-        // Docker configuration
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = "irfanriaz076/flask-task-manager"
+        DOCKER_IMAGE = 'irfanriaz076/flask-task-manager'
         IMAGE_TAG = "${BUILD_NUMBER}"
-        LATEST_TAG = "latest"
-        
-        // Kubernetes configuration
-        K8S_NAMESPACE = "default"
-        K8S_DEPLOYMENT = "flask-app"
-        
-        // Git configuration
-        GIT_REPO = "https://github.com/irfanriaz076/devopsproject"
-        GIT_BRANCH = "main"
+        LATEST_TAG = 'latest'
+
+        K8S_NAMESPACE = 'default'
+        K8S_DEPLOYMENT = 'flask-app'
+
+        GIT_REPO = 'https://github.com/irfanriaz076/devopsproject'
+        GIT_BRANCH = 'main'
     }
-    
+
     options {
         buildDiscarder(logRotator(numToKeepStr: '10'))
         timestamps()
         timeout(time: 30, unit: 'MINUTES')
     }
-    
+
     stages {
         stage('Initialize') {
             steps {
-                script {
-                    echo "=========================================="
-                    echo "Starting CI/CD Pipeline"
-                    echo "Build Number: ${BUILD_NUMBER}"
-                    echo "Build ID: ${BUILD_ID}"
-                    echo "Job Name: ${JOB_NAME}"
-                    echo "=========================================="
-                }
+                echo "=========================================="
+                echo "Starting CI/CD Pipeline"
+                echo "Build Number: ${BUILD_NUMBER}"
+                echo "Job Name: ${JOB_NAME}"
+                echo "=========================================="
             }
         }
-        
+
         stage('Code Fetch') {
             steps {
-                echo 'Stage 1: Fetching code from GitHub...'
                 script {
-                    try {
-                        cleanWs()
-                        checkout([
-                            $class: 'GitSCM',
-                            branches: [[name: "*/${GIT_BRANCH}"]],
-                            userRemoteConfigs: [[url: "${GIT_REPO}"]]
-                        ])
-                        echo 'Code fetched successfully!'
-                        sh '''
-                            echo "Git Commit: $(git rev-parse HEAD)"
-                            echo "Git Author: $(git log -1 --pretty=format:'%an')"
-                            echo "Git Message: $(git log -1 --pretty=format:'%s')"
-                        '''
-                    } catch (Exception e) {
-                        error "Failed to fetch code: ${e.message}"
-                    }
+                    cleanWs()
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "*/${GIT_BRANCH}"]],
+                        userRemoteConfigs: [[url: GIT_REPO]]
+                    ])
                 }
             }
         }
-        
+
         stage('Code Analysis') {
             steps {
-                echo 'Stage 2: Performing code analysis...'
-                script {
-                    try {
-                        sh '''
-                            echo "Project Structure:"
-                            ls -la
-                            
-                            echo "\nChecking for required files..."
-                            if [ -f "app.py" ]; then
-                                echo "✓ app.py found"
-                            else
-                                echo "✗ app.py not found"
-                                exit 1
-                            fi
-                            
-                            if [ -f "requirements.txt" ]; then
-                                echo "✓ requirements.txt found"
-                            else
-                                echo "✗ requirements.txt not found"
-                                exit 1
-                            fi
-                            
-                            if [ -f "Dockerfile" ]; then
-                                echo "✓ Dockerfile found"
-                            else
-                                echo "✗ Dockerfile not found"
-                                exit 1
-                            fi
-                        '''
-                        echo 'Code analysis completed!'
-                    } catch (Exception e) {
-                        error "Code analysis failed: ${e.message}"
-                    }
-                }
+                sh '''
+                    ls -la
+                    test -f app.py || exit 1
+                    test -f requirements.txt || exit 1
+                    test -f Dockerfile || exit 1
+                '''
             }
         }
-        
-        stage('Docker Image Creation') {
+
+        stage('Docker Image Build') {
             steps {
-                echo 'Stage 3: Building Docker image...'
-                script {
-                    try {
-                        sh """
-                            echo "Building Docker image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
-                            docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .
-                            docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:${LATEST_TAG}
-                            
-                            echo "Verifying image..."
-                            docker images | grep ${DOCKER_IMAGE}
-                        """
-                        echo ' Docker image built successfully!'
-                    } catch (Exception e) {
-                        error " Docker image creation failed: ${e.message}"
-                    }
-                }
+                sh '''
+                    docker build -t irfanriaz076/flask-task-manager:${BUILD_NUMBER} .
+                    docker tag irfanriaz076/flask-task-manager:${BUILD_NUMBER} irfanriaz076/flask-task-manager:latest
+                    docker images | grep flask-task-manager
+                '''
             }
         }
-        
-        stage('Docker Image Testing') {
+
+        stage('Docker Image Test') {
             steps {
-                echo 'Stage 4: Testing Docker image...'
-                script {
-                    try {
-                        sh """
-                            echo "Testing Docker image..."
-                            docker run --rm ${DOCKER_IMAGE}:${IMAGE_TAG} python --version
-                            docker run --rm ${DOCKER_IMAGE}:${IMAGE_TAG} pip list
-                            
-                            echo "Image size:"
-                            docker images ${DOCKER_IMAGE}:${IMAGE_TAG} --format "{{.Size}}"
-                        """
-                        echo 'Docker image tested successfully!'
-                    } catch (Exception e) {
-                        error "Docker image testing failed: ${e.message}"
-                    }
-                }
+                sh '''
+                    docker run --rm irfanriaz076/flask-task-manager:${BUILD_NUMBER} python --version
+                    docker run --rm irfanriaz076/flask-task-manager:${BUILD_NUMBER} pip list
+                '''
             }
         }
-        
+
         stage('Push to DockerHub') {
             steps {
-                echo 'Stage 5: Pushing Docker image to DockerHub...'
-                script {
-                    try {
-                        sh """
-                            echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin
-                        """
-                        sh """
-                            echo "Pushing ${DOCKER_IMAGE}:${IMAGE_TAG}"
-                            docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
-                            
-                            echo "Pushing ${DOCKER_IMAGE}:${LATEST_TAG}"
-                            docker push ${DOCKER_IMAGE}:${LATEST_TAG}
-                        """
-                        echo 'Docker image pushed successfully!'
-                        echo "Image available at: https://hub.docker.com/r/${DOCKERHUB_CREDENTIALS_USR}/flask-task-manager"
-                    } catch (Exception e) {
-                        error "Failed to push Docker image: ${e.message}"
-                    } finally {
-                        sh 'docker logout'
-                    }
-                }
+                sh '''
+                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                    docker push irfanriaz076/flask-task-manager:${BUILD_NUMBER}
+                    docker push irfanriaz076/flask-task-manager:latest
+                    docker logout
+                '''
             }
         }
-        
+
         stage('Kubernetes Deployment') {
             steps {
-                echo 'Stage 6: Deploying to Kubernetes...'
-                script {
-                    try {
-                        sh '''
-                            echo "Checking Kubernetes cluster..."
-                            kubectl cluster-info
-                            kubectl get nodes
-                        '''
-                        
-                        sh """
-                            sed -i 's|image: .*flask-task-manager:.*|image: irfanriaz076/flask-task-manager:${BUILD_NUMBER}|g' app-deployement.yml
-                        """
-                        
-                        sh '''
-                            echo "Deploying MySQL..."
-                            kubectl apply -f mysql-deployement.yml
-                            
-                            echo "Waiting for MySQL to be ready..."
-                            kubectl wait --for=condition=ready pod -l app=mysql --timeout=300s || true
-                            kubectl get pods -l app=mysql
-                        '''
-                        
-                        sh '''
-                            echo "Deploying Flask application..."
-                            kubectl apply -f app-deployement.yml
-                            
-                            echo "Waiting for deployment rollout..."
-                            kubectl rollout status deployment/flask-app --timeout=300s
-                        '''
-                        
-                        sh '''
-                            echo "\n=== Deployment Status ==="
-                            kubectl get deployments
-                            
-                            echo "\n=== Pods Status ==="
-                            kubectl get pods -o wide
-                            
-                            echo "\n=== Services Status ==="
-                            kubectl get services
-                            
-                            echo "\n=== PVC Status ==="
-                            kubectl get pvc
-                        '''
-                        
-                        echo 'Kubernetes deployment successful!'
-                    } catch (Exception e) {
-                        sh '''
-                            echo "Deployment failed. Showing pod logs..."
-                            kubectl get pods
-                            kubectl describe pods -l app=flask-app
-                            kubectl logs -l app=flask-app --tail=50 || true
-                        '''
-                        error "Kubernetes deployment failed: ${e.message}"
-                    }
-                }
+                sh '''
+                    kubectl cluster-info
+                    sed -i "s|image: .*flask-task-manager:.*|image: irfanriaz076/flask-task-manager:${BUILD_NUMBER}|g" app-deployement.yml
+                    kubectl apply -f mysql-deployement.yml
+                    kubectl apply -f app-deployement.yml
+                    kubectl rollout status deployment/flask-app --timeout=300s
+                '''
             }
         }
-        
+
         stage('Verify Deployment') {
             steps {
-                echo 'Stage 7: Verifying complete deployment...'
-                script {
-                    try {
-                        sh '''
-                            echo "=== Final Verification ==="
-                            
-                            echo "\n1. Pod Status:"
-                            kubectl get pods --all-namespaces
-                            
-                            echo "\n2. Service Status:"
-                            kubectl get svc
-                            
-                            echo "\n3. Testing Application Health:"
-                            APP_POD=$(kubectl get pod -l app=flask-app -o jsonpath="{.items[0].metadata.name}")
-                            kubectl exec $APP_POD -- curl -s http://localhost:5000/health || echo "Health check pending..."
-                            
-                            MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "localhost")
-                            echo "\n4. Application Access:"
-                            echo "Application URL: http://${MINIKUBE_IP}:30080"
-                            
-                            echo "\n5. Resource Usage:"
-                            kubectl top nodes || echo "Metrics not available yet"
-                            kubectl top pods || echo "Metrics not available yet"
-                        '''
-                        
-                        echo 'Deployment verification completed!'
-                    } catch (Exception e) {
-                        echo "Verification warning: ${e.message}"
-                    }
-                }
+                sh '''
+                    kubectl get pods
+                    APP_POD=$(kubectl get pod -l app=flask-app -o jsonpath="{.items[0].metadata.name}")
+                    kubectl exec $APP_POD -- curl -s http://localhost:5000/health || true
+                    MINIKUBE_IP=$(minikube ip || echo localhost)
+                    echo "Application URL: http://$MINIKUBE_IP:30080"
+                '''
             }
         }
     }
-    
+
     post {
         always {
-            echo 'Cleaning up...'
-            script {
-                sh '''
-                    echo "Cleaning up old Docker images..."
-                    docker system prune -f || true
-                    docker images
-                '''
-            }
+            sh 'docker system prune -f || true'
         }
-        
+
         success {
             echo """
-            ========================================
-                Pipeline completed successfully!
-            ========================================
-            "Build Number: ${BUILD_NUMBER}"
-            "Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
-            
-            Access your application:
-            - Application: http://$(minikube ip):30080
-            ========================================
-            """
+========================================
+Pipeline completed successfully
+========================================
+Build Number: ${BUILD_NUMBER}
+Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}
+========================================
+"""
         }
-        
+
         failure {
-            echo """
-            ========================================
-                   Pipeline failed!
-            ========================================
-            Build Number: ${BUILD_NUMBER}
-            Check the logs above for error details.
-            ========================================
-            """
-            
-            script {
-                sh '''
-                    echo "Collecting diagnostic information..."
-                    kubectl get all
-                    kubectl describe pods -l app=flask-app || true
-                    kubectl logs -l app=flask-app --tail=100 || true
-                '''
-            }
-        }
-        
-        unstable {
-            echo 'Pipeline completed with warnings'
-        }
-        
-        aborted {
-            echo 'Pipeline was aborted'
+            echo "Pipeline failed. Check logs."
         }
     }
 }
