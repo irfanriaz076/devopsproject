@@ -281,8 +281,8 @@ pipeline {
             ========================================
                 Pipeline completed successfully!
             ========================================
-            Build Number: ${BUILD_NUMBER}
-            Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}
+            "Build Number: ${BUILD_NUMBER}"
+            "Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
             
             Access your application:
             - Application: http://$(minikube ip):30080
