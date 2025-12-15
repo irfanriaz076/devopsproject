@@ -199,13 +199,14 @@ pipeline {
                         // Update image in deployment
                         sh """
                             # Update the deployment YAML with new image tag
-                            sed -i 's|image: .*flask-task-manager:.*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|g' k8s/app-deployment.yaml
+                            sed -i 's|image: .*flask-task-manager:.*|image: irfanriaz076/flask-task-manager:${BUILD_NUMBER}|g' app-deployement.yml
+
                         """
                         
                         // Apply MySQL deployment first
                         sh '''
                             echo "Deploying MySQL..."
-                            kubectl apply -f k8s/mysql-deployment.yaml
+                            kubectl apply -f mysql-deployment.yaml
                             
                             echo "Waiting for MySQL to be ready..."
                             kubectl wait --for=condition=ready pod -l app=mysql --timeout=300s || true
@@ -215,7 +216,7 @@ pipeline {
                         // Apply application deployment
                         sh '''
                             echo "Deploying Flask application..."
-                            kubectl apply -f k8s/app-deployment.yaml
+                            kubectl apply -f app-deployment.yaml
                             
                             echo "Waiting for deployment rollout..."
                             kubectl rollout status deployment/flask-app --timeout=300s
@@ -259,7 +260,7 @@ pipeline {
                         // Deploy Prometheus
                         sh '''
                             echo "Deploying Prometheus..."
-                            kubectl apply -f k8s/prometheus-config.yaml
+                            kubectl apply -f prometheus-config.yaml
                             
                             echo "Waiting for Prometheus to be ready..."
                             kubectl wait --for=condition=ready pod -l app=prometheus --timeout=120s || true
@@ -268,7 +269,7 @@ pipeline {
                         // Deploy Grafana
                         sh '''
                             echo "Deploying Grafana..."
-                            kubectl apply -f k8s/grafana-deployment.yaml
+                            kubectl apply -f grafana-deployment.yaml
                             
                             echo "Waiting for Grafana to be ready..."
                             kubectl wait --for=condition=ready pod -l app=grafana --timeout=120s || true
