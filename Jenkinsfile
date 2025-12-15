@@ -206,7 +206,7 @@ pipeline {
                         // Apply MySQL deployment first
                         sh '''
                             echo "Deploying MySQL..."
-                            kubectl apply -f mysql-deployment.yaml
+                            kubectl apply -f mysql-deployment.yml
                             
                             echo "Waiting for MySQL to be ready..."
                             kubectl wait --for=condition=ready pod -l app=mysql --timeout=300s || true
@@ -216,7 +216,7 @@ pipeline {
                         // Apply application deployment
                         sh '''
                             echo "Deploying Flask application..."
-                            kubectl apply -f app-deployment.yaml
+                            kubectl apply -f app-deployment.yml
                             
                             echo "Waiting for deployment rollout..."
                             kubectl rollout status deployment/flask-app --timeout=300s
@@ -260,7 +260,7 @@ pipeline {
                         // Deploy Prometheus
                         sh '''
                             echo "Deploying Prometheus..."
-                            kubectl apply -f prometheus-config.yaml
+                            kubectl apply -f prometheus-config.yml
                             
                             echo "Waiting for Prometheus to be ready..."
                             kubectl wait --for=condition=ready pod -l app=prometheus --timeout=120s || true
@@ -269,7 +269,7 @@ pipeline {
                         // Deploy Grafana
                         sh '''
                             echo "Deploying Grafana..."
-                            kubectl apply -f grafana-deployment.yaml
+                            kubectl apply -f grafana-deployment.yml
                             
                             echo "Waiting for Grafana to be ready..."
                             kubectl wait --for=condition=ready pod -l app=grafana --timeout=120s || true
