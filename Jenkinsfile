@@ -269,7 +269,7 @@ pipeline {
                         // Deploy Grafana
                         sh '''
                             echo "Deploying Grafana..."
-                            kubectl apply -f grafana-deployement.yml
+                            kubectl apply -f grafana-deployment.yml
                             
                             echo "Waiting for Grafana to be ready..."
                             kubectl wait --for=condition=ready pod -l app=grafana --timeout=120s || true
