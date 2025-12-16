@@ -85,12 +85,50 @@ pipeline {
             }
         }
 
-        stage('Kubernetes Deployment') {
+        stage('Deploy MySQL') {
             steps {
+                echo "Deploying MySQL database..."
+                sh '''
+                    kubectl apply -f mysql-deployement.yml
+                    echo "Waiting for MySQL to be ready..."
+                    kubectl wait --for=condition=ready pod -l app=mysql --timeout=300s || true
+                    kubectl get pods -l app=mysql
+                '''
+            }
+        }
+
+        stage('Deploy Prometheus') {
+            steps {
+                echo "Deploying Prometheus monitoring..."
+                sh '''
+                    kubectl apply -f prometheus-config.yml
+                    echo "Waiting for Prometheus to be ready..."
+                    kubectl wait --for=condition=ready pod -l app=prometheus --timeout=300s || true
+                    kubectl get pods -l app=prometheus
+                    kubectl get svc prometheus-service
+                '''
+            }
+        }
+
+        stage('Deploy Grafana') {
+            steps {
+                echo "Deploying Grafana dashboards..."
+                sh '''
+                    kubectl apply -f grafana-deployment.yml
+                    echo "Waiting for Grafana to be ready..."
+                    kubectl wait --for=condition=ready pod -l app=grafana --timeout=300s || true
+                    kubectl get pods -l app=grafana
+                    kubectl get svc grafana-service
+                '''
+            }
+        }
+
+        stage('Deploy Flask Application') {
+            steps {
+                echo "Deploying Flask application..."
                 sh '''
                     kubectl cluster-info
                     sed -i "s|image: .*flask-task-manager:.*|image: irfanriaz076/flask-task-manager:${BUILD_NUMBER}|g" app-deployement.yml
-                    kubectl apply -f mysql-deployement.yml
                     kubectl apply -f app-deployement.yml
                     kubectl rollout status deployment/flask-app --timeout=300s
                 '''
@@ -100,11 +138,50 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh '''
+                    echo "=========================================="
+                    echo "Deployment Status"
+                    echo "=========================================="
+                    
                     kubectl get pods
+                    kubectl get svc
+                    
+                    echo ""
+                    echo "Checking Flask application health..."
                     APP_POD=$(kubectl get pod -l app=flask-app -o jsonpath="{.items[0].metadata.name}")
                     kubectl exec $APP_POD -- curl -s http://localhost:5000/health || true
+                    
                     MINIKUBE_IP=$(minikube ip || echo localhost)
-                    echo "Application URL: http://$MINIKUBE_IP:30080"
+                    
+                    echo ""
+                    echo "=========================================="
+                    echo "Access URLs:"
+                    echo "=========================================="
+                    echo "Flask App:    http://$MINIKUBE_IP:30080"
+                    echo "Prometheus:   http://$MINIKUBE_IP:30090"
+                    echo "Grafana:      http://$MINIKUBE_IP:30030"
+                    echo ""
+                    echo "Grafana Login: admin / admin"
+                    echo "=========================================="
+                '''
+            }
+        }
+
+        stage('Verify Monitoring Stack') {
+            steps {
+                echo "Verifying monitoring stack..."
+                sh '''
+                    echo "Checking Prometheus targets..."
+                    sleep 10
+                    PROM_POD=$(kubectl get pod -l app=prometheus -o jsonpath="{.items[0].metadata.name}")
+                    kubectl exec $PROM_POD -- wget -qO- http://localhost:9090/-/healthy || echo "Prometheus health check pending..."
+                    
+                    echo ""
+                    echo "Checking Grafana status..."
+                    GRAFANA_POD=$(kubectl get pod -l app=grafana -o jsonpath="{.items[0].metadata.name}")
+                    kubectl exec $GRAFANA_POD -- wget -qO- http://localhost:3000/api/health || echo "Grafana health check pending..."
+                    
+                    echo ""
+                    echo "All monitoring components deployed successfully!"
                 '''
             }
         }
@@ -116,18 +193,39 @@ pipeline {
         }
 
         success {
-            echo """
+            script {
+                def minikubeIp = sh(script: 'minikube ip || echo localhost', returnStdout: true).trim()
+                echo """
 ========================================
 Pipeline completed successfully
 ========================================
 Build Number: ${BUILD_NUMBER}
 Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}
+
+Access your services:
+- Flask App:    http://${minikubeIp}:30080
+- Prometheus:   http://${minikubeIp}:30090
+- Grafana:      http://${minikubeIp}:30030
+  (Login: admin/admin)
+
+Next Steps:
+1. Open Grafana and verify Prometheus datasource
+2. Create dashboards for Flask app metrics
+3. Monitor /metrics endpoint on Flask app
 ========================================
 """
+            }
         }
 
         failure {
-            echo "Pipeline failed. Check logs."
+            echo "Pipeline failed. Check logs for details."
+            sh '''
+                echo "Current pod status:"
+                kubectl get pods
+                echo ""
+                echo "Recent events:"
+                kubectl get events --sort-by='.lastTimestamp' | tail -20
+            '''
         }
     }
-}
+}    
