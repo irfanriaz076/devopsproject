@@ -77,20 +77,20 @@ pipeline {
 
         stage('Docker Image Build') {
             steps {
-                sh '''
+                sh """
                     docker build -t irfanriaz076/flask-task-manager:${BUILD_NUMBER} .
                     docker tag irfanriaz076/flask-task-manager:${BUILD_NUMBER} irfanriaz076/flask-task-manager:latest
                     docker images | grep flask-task-manager
-                '''
+                """
             }
         }
 
         stage('Docker Image Test') {
             steps {
-                sh '''
+                sh """
                     docker run --rm irfanriaz076/flask-task-manager:${BUILD_NUMBER} python --version
                     docker run --rm irfanriaz076/flask-task-manager:${BUILD_NUMBER} pip list
-                '''
+                """
             }
         }
 
@@ -147,12 +147,12 @@ pipeline {
         stage('Deploy Flask Application') {
             steps {
                 echo "Deploying Flask application..."
-                sh '''
+                sh """
                     kubectl cluster-info
                     sed -i "s|image: .*flask-task-manager:.*|image: irfanriaz076/flask-task-manager:${BUILD_NUMBER}|g" app-deployement.yml
                     kubectl apply -f app-deployement.yml
                     kubectl rollout status deployment/flask-app --timeout=300s
-                '''
+                """
             }
         }
 
@@ -268,8 +268,15 @@ Deployed Services:
 ✓ Prometheus Monitoring
 ✓ Grafana Dashboards
 
+Access URLs:
+------------------
+Flask App:    http://${minikubeIp}:30080
+Prometheus:   http://${minikubeIp}:30090
+Grafana:      http://${minikubeIp}:30030
 
-
+Grafana Login: admin / admin
+========================================
+"""
             }
         }
 
