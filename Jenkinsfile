@@ -260,8 +260,6 @@ pipeline {
 ========================================
 ✓ Pipeline Completed Successfully!
 ========================================
-Build Number: ${BUILD_NUMBER}
-Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}
 
 Deployed Services:
 ------------------
@@ -270,12 +268,6 @@ Deployed Services:
 ✓ Prometheus Monitoring
 ✓ Grafana Dashboards
 
-Access URLs (NodePort):
------------------------
-Flask App:    http://${minikubeIp}:30080
-Prometheus:   http://${minikubeIp}:30090
-Grafana:      http://${minikubeIp}:30030
-  (Login: admin/admin)
 
 
             }
